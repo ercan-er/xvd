@@ -21,6 +21,8 @@ export interface PostProcessOptions {
   gifWidth?: number;
   watermark?: string;           // path to PNG file
   watermarkPos?: WatermarkPosition;
+  watermarkSize?: number;       // width in px to scale watermark (default: 150)
+  watermarkOpacity?: number;    // 0.0 – 1.0 (default: 0.7)
   notify?: boolean;
 }
 
@@ -137,7 +139,13 @@ export async function downloadVideo(
   if (postProcess?.watermark) {
     if (!hasFfmpeg) throw new Error('Watermark requires ffmpeg. Install it first.');
     onProgress?.({ downloaded: 0, total: 1, speed: 0, percentage: 0, phase: 'watermark' });
-    finalPath = await addWatermark(filePath, postProcess.watermark, postProcess.watermarkPos ?? 'bottom-right');
+    finalPath = await addWatermark(
+      filePath,
+      postProcess.watermark,
+      postProcess.watermarkPos ?? 'bottom-right',
+      postProcess.watermarkSize ?? 150,
+      postProcess.watermarkOpacity ?? 0.7,
+    );
     onProgress?.({ downloaded: 1, total: 1, speed: 0, percentage: 100, phase: 'watermark' });
   }
 

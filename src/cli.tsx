@@ -98,10 +98,12 @@ function printHelp(): void {
     // ── POST-PROCESSING ──
     '  ' + c.section('POST-PROCESSING') + '  ' + c.req('(requires ffmpeg)'),
     blank,
-    row('--gif',          null, null,         'Convert to animated GIF'),
-    row('--watermark',    null, '<image.png>', 'Burn PNG watermark into video'),
-    row('--watermark-pos',null, '<pos>',       'Watermark position'),
+    row('--gif',              null, null,         'Convert to animated GIF'),
+    row('--watermark',        null, '<image.png>', 'Burn PNG watermark into video'),
+    row('--watermark-pos',    null, '<pos>',       'Watermark position',          'bottom-right'),
     `  ${''.padEnd(16)}       ${c.val('top-left')}${c.dot(' · ')}${c.val('top-right')}${c.dot(' · ')}${c.val('bottom-left')}${c.dot(' · ')}${c.val('bottom-right')}${c.dot(' · ')}${c.val('center')}`,
+    row('--watermark-size',   null, '<px>',        'Scale watermark to this width', '150'),
+    row('--watermark-opacity',null, '<0.0–1.0>',   'Watermark transparency',        '0.7'),
     blank,
     line,
     blank,
@@ -153,8 +155,10 @@ const cli = meow('', {
     quality:      { type: 'string',  shortFlag: 'q', default: 'best' },
     concurrent:   { type: 'number',  shortFlag: 'c', default: 4 },
     gif:          { type: 'boolean', default: false },
-    watermark:    { type: 'string' },
-    watermarkPos: { type: 'string',  default: 'bottom-right' },
+    watermark:        { type: 'string' },
+    watermarkPos:     { type: 'string',  default: 'bottom-right' },
+    watermarkSize:    { type: 'number',  default: 150 },
+    watermarkOpacity: { type: 'number',  default: 0.7 },
     notify:       { type: 'boolean', default: false },
     watch:        { type: 'boolean', default: false },
     batch:        { type: 'string' },
@@ -171,7 +175,7 @@ const cli = meow('', {
 const url         = cli.input[0];
 const {
   output, quality, concurrent,
-  gif, watermark, watermarkPos, notify,
+  gif, watermark, watermarkPos, watermarkSize, watermarkOpacity, notify,
   watch, batch, profile, from, to, keyword,
   history, help, version,
 } = cli.flags;
@@ -211,9 +215,11 @@ if (mode === 'profile' && !profile) {
 // ── Build post-process options ────────────────────────────────
 const postProcess = (gif || watermark)
   ? {
-      gif:          gif || false,
-      watermark:    watermark,
-      watermarkPos: (watermarkPos as WatermarkPosition) ?? 'bottom-right',
+      gif:              gif || false,
+      watermark:        watermark,
+      watermarkPos:     (watermarkPos as WatermarkPosition) ?? 'bottom-right',
+      watermarkSize:    watermarkSize,
+      watermarkOpacity: watermarkOpacity,
     }
   : undefined;
 

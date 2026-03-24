@@ -86,21 +86,29 @@ const OVERLAY_MAP: Record<WatermarkPosition, string> = {
 /**
  * Burn a semi-transparent PNG watermark into a video.
  * Returns the watermarked file path (replaces the original).
+ *
+ * @param size    Width in pixels to scale the watermark to (height auto). Default: 150
+ * @param opacity Transparency 0.0 (invisible) – 1.0 (fully opaque). Default: 0.7
  */
 export async function addWatermark(
   videoPath: string,
   watermarkPath: string,
   position: WatermarkPosition = 'bottom-right',
+  size: number = 150,
+  opacity: number = 0.7,
 ): Promise<string> {
   const dir = path.dirname(videoPath);
   const base = path.basename(videoPath, path.extname(videoPath));
   const outPath = path.join(dir, `${base}_wm.mp4`);
 
+  // Clamp opacity to valid range
+  const alpha = Math.min(1, Math.max(0, opacity));
+
   await run([
     '-i', videoPath,
     '-i', watermarkPath,
     '-filter_complex',
-    `[1:v]format=rgba,colorchannelmixer=aa=0.75[wm];[0:v][wm]${OVERLAY_MAP[position]}`,
+    `[1:v]scale=${size}:-1,format=rgba,colorchannelmixer=aa=${alpha}[wm];[0:v][wm]${OVERLAY_MAP[position]}`,
     '-codec:a', 'copy',
     outPath,
   ]);
