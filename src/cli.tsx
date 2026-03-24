@@ -1,71 +1,188 @@
 import React from 'react';
 import { render } from 'ink';
 import meow from 'meow';
+import chalk from 'chalk';
 import { App } from './App.js';
 import type { WatermarkPosition } from './lib/ffmpeg.js';
 
-const cli = meow(
-  `
-  Usage
-    $ xvd <tweet-url>                    Download a single video
-    $ xvd --watch                        Auto-download any X URL you copy
-    $ xvd --batch <file>                 Download all URLs in a text file
-    $ xvd --profile <@user>              Download all videos from a profile
-    $ xvd --history                      Show download history
+// ── Beautiful help screen ─────────────────────────────────────
 
-  Options
-    --output,    -o <dir>                Save directory (default: ~/Movies or ~/Downloads)
-    --quality,   -q <preset>             best | worst | 720p | 480p | 360p | ask  (default: best)
-    --concurrent,-c <n>                  Parallel downloads for --batch / --profile (default: 4)
-    --gif                                Convert downloaded video to animated GIF  (requires ffmpeg)
-    --watermark  <image.png>             Burn a PNG watermark into the video        (requires ffmpeg)
-    --watermark-pos <pos>                top-left | top-right | bottom-left | bottom-right | center
-    --notify                             Send desktop notification when done
-    --from  <YYYY-MM-DD>                 --profile: only tweets after this date
-    --to    <YYYY-MM-DD>                 --profile: only tweets before this date
-    --keyword   <text>                   --profile: only tweets containing this text
-    --history                            Show download history and exit
-    --version                            Print version
-    --help                               Print this help
+function printHelp(): void {
+  const c = {
+    // structural
+    border:   chalk.hex('#2a2a2a'),
+    dim:      chalk.hex('#555555'),
+    // section header
+    section:  chalk.hex('#00d4ff').bold,
+    // commands
+    cmd:      chalk.white.bold,
+    cmdArg:   chalk.hex('#88aaff'),
+    // flags
+    flag:     chalk.hex('#7dd3fc').bold,
+    short:    chalk.hex('#38bdf8'),
+    meta:     chalk.hex('#94a3b8'),
+    def:      chalk.hex('#64748b'),
+    // values / presets
+    val:      chalk.hex('#a3e635'),
+    dot:      chalk.hex('#334155'),
+    // examples
+    dollar:   chalk.hex('#475569'),
+    url:      chalk.hex('#38bdf8'),
+    arg:      chalk.hex('#fbbf24'),
+    // special
+    req:      chalk.hex('#f97316'),   // "requires ffmpeg"
+    header1:  chalk.hex('#00d4ff').bold,
+    header2:  chalk.hex('#818cf8').bold,
+  };
 
-  Examples
-    $ xvd https://x.com/NASA/status/1902118174591521056
-    $ xvd https://x.com/user/status/123 -o ~/Desktop --gif --notify
-    $ xvd https://x.com/user/status/123 --watermark ~/logo.png --watermark-pos bottom-right
-    $ xvd https://x.com/user/status/123 -q ask
-    $ xvd --watch -o ~/Videos --notify
-    $ xvd --batch urls.txt -c 8
-    $ xvd --profile @NASA --from 2024-01-01 --quality 720p
-    $ xvd --history
-`,
-  {
-    importMeta: import.meta,
-    flags: {
-      output:       { type: 'string',  shortFlag: 'o' },
-      quality:      { type: 'string',  shortFlag: 'q', default: 'best' },
-      concurrent:   { type: 'number',  shortFlag: 'c', default: 4 },
-      gif:          { type: 'boolean', default: false },
-      watermark:    { type: 'string' },
-      watermarkPos: { type: 'string',  default: 'bottom-right' },
-      notify:       { type: 'boolean', default: false },
-      watch:        { type: 'boolean', default: false },
-      batch:        { type: 'string' },
-      profile:      { type: 'string' },
-      from:         { type: 'string' },
-      to:           { type: 'string' },
-      keyword:      { type: 'string' },
-      history:      { type: 'boolean', default: false },
-    },
+  const W = 62;
+  const line  = c.border('─'.repeat(W));
+  const blank = '';
+
+  const row = (flag: string, short: string | null, meta: string | null, desc: string, def?: string) => {
+    const f   = c.flag(flag.padEnd(16));
+    const s   = short ? c.short(short.padEnd(4)) : '    ';
+    const m   = meta  ? c.meta(meta.padEnd(14))  : '              ';
+    const d   = chalk.white(desc);
+    const df  = def   ? c.def(`  [${def}]`)      : '';
+    return `  ${f} ${s} ${m} ${d}${df}`;
+  };
+
+  const ex = (cmd: string, comment?: string) => {
+    // parse: split on spaces, colorize $ url flags
+    const parts = cmd.split(' ');
+    const colored = parts.map((p, i) => {
+      if (p === '$')                return c.dollar('$');
+      if (p === 'xvd')              return chalk.white.bold('xvd');
+      if (p.startsWith('https://')) return c.url(p);
+      if (p.startsWith('--'))       return c.arg(p);
+      if (p.startsWith('-') && p.length <= 2) return c.arg(p);
+      if (i > 0)                    return c.meta(p);
+      return p;
+    });
+    const base = '  ' + colored.join(' ');
+    return comment ? base + c.dim('  # ' + comment) : base;
+  };
+
+  const lines: string[] = [
+    blank,
+    // ── header ──
+    '  ' + c.header1('▸ XVD') + '  ' + chalk.hex('#475569')('Download X / Twitter videos from your terminal'),
+    blank,
+    line,
+    blank,
+
+    // ── USAGE ──
+    '  ' + c.section('USAGE'),
+    blank,
+    `  ${c.cmd('xvd')} ${c.cmdArg('<tweet-url>')}              ${chalk.white('Download a single video')}`,
+    `  ${c.cmd('xvd')} ${c.flag('--watch')}                   ${chalk.white('Auto-download any X URL you copy')}`,
+    `  ${c.cmd('xvd')} ${c.flag('--batch')} ${c.cmdArg('<file>')}             ${chalk.white('Download all URLs in a text file')}`,
+    `  ${c.cmd('xvd')} ${c.flag('--profile')} ${c.cmdArg('<@user>')}           ${chalk.white('Download all videos from a profile')}`,
+    `  ${c.cmd('xvd')} ${c.flag('--history')}                  ${chalk.white('Browse download history')}`,
+    blank,
+    line,
+    blank,
+
+    // ── OUTPUT ──
+    '  ' + c.section('OUTPUT'),
+    blank,
+    row('--output', '-o', '<dir>',    'Save directory',           '~/Movies'),
+    row('--quality', '-q', '<preset>', 'Video quality',            'best'),
+    `  ${''.padEnd(16)}  ${''.padEnd(4)}  ${c.val('best')}${c.dot(' · ')}${c.val('worst')}${c.dot(' · ')}${c.val('720p')}${c.dot(' · ')}${c.val('480p')}${c.dot(' · ')}${c.val('360p')}${c.dot(' · ')}${c.val('ask')}`,
+    row('--concurrent', '-c', '<n>',   'Parallel downloads',       '4'),
+    blank,
+    line,
+    blank,
+
+    // ── POST-PROCESSING ──
+    '  ' + c.section('POST-PROCESSING') + '  ' + c.req('(requires ffmpeg)'),
+    blank,
+    row('--gif',          null, null,         'Convert to animated GIF'),
+    row('--watermark',    null, '<image.png>', 'Burn PNG watermark into video'),
+    row('--watermark-pos',null, '<pos>',       'Watermark position'),
+    `  ${''.padEnd(16)}       ${c.val('top-left')}${c.dot(' · ')}${c.val('top-right')}${c.dot(' · ')}${c.val('bottom-left')}${c.dot(' · ')}${c.val('bottom-right')}${c.dot(' · ')}${c.val('center')}`,
+    blank,
+    line,
+    blank,
+
+    // ── FILTERS ──
+    '  ' + c.section('FILTERS') + '  ' + c.dim('(--profile only)'),
+    blank,
+    row('--from',    null, '<YYYY-MM-DD>', 'Only tweets after this date'),
+    row('--to',      null, '<YYYY-MM-DD>', 'Only tweets before this date'),
+    row('--keyword', null, '<text>',       'Only tweets containing this text'),
+    blank,
+    line,
+    blank,
+
+    // ── MISC ──
+    '  ' + c.section('MISC'),
+    blank,
+    row('--notify',  null, null, 'Desktop notification when done'),
+    row('--version', null, null, 'Print version'),
+    row('--help',    null, null, 'Show this help'),
+    blank,
+    line,
+    blank,
+
+    // ── EXAMPLES ──
+    '  ' + c.section('EXAMPLES'),
+    blank,
+    ex('$ xvd https://x.com/NASA/status/1902118174591521056'),
+    ex('$ xvd https://x.com/user/status/123 -o ~/Desktop --gif --notify'),
+    ex('$ xvd https://x.com/user/status/123 --watermark logo.png --watermark-pos bottom-right'),
+    ex('$ xvd https://x.com/user/status/123 -q ask',         'interactive picker'),
+    ex('$ xvd --watch -o ~/Videos --notify',                  'clipboard mode'),
+    ex('$ xvd --batch urls.txt -c 8',                         '8 parallel downloads'),
+    ex('$ xvd --profile @NASA --from 2024-01-01 -q 720p'),
+    ex('$ xvd --history'),
+    blank,
+  ];
+
+  process.stdout.write(lines.join('\n') + '\n');
+}
+
+// ── CLI definition ────────────────────────────────────────────
+
+const cli = meow('', {
+  importMeta: import.meta,
+  autoHelp: false,
+  flags: {
+    output:       { type: 'string',  shortFlag: 'o' },
+    quality:      { type: 'string',  shortFlag: 'q', default: 'best' },
+    concurrent:   { type: 'number',  shortFlag: 'c', default: 4 },
+    gif:          { type: 'boolean', default: false },
+    watermark:    { type: 'string' },
+    watermarkPos: { type: 'string',  default: 'bottom-right' },
+    notify:       { type: 'boolean', default: false },
+    watch:        { type: 'boolean', default: false },
+    batch:        { type: 'string' },
+    profile:      { type: 'string' },
+    from:         { type: 'string' },
+    to:           { type: 'string' },
+    keyword:      { type: 'string' },
+    history:      { type: 'boolean', default: false },
+    help:         { type: 'boolean', shortFlag: 'h', default: false },
+    version:      { type: 'boolean', shortFlag: 'v', default: false },
   },
-);
+});
 
 const url         = cli.input[0];
 const {
   output, quality, concurrent,
   gif, watermark, watermarkPos, notify,
   watch, batch, profile, from, to, keyword,
-  history,
+  history, help, version,
 } = cli.flags;
+
+// ── Version / help shortcuts ──────────────────────────────────
+
+if (version) {
+  const pkg = (await import('../package.json', { with: { type: 'json' } })).default;
+  console.log(pkg.version);
+  process.exit(0);
+}
 
 // ── Determine mode ────────────────────────────────────────────
 type Mode = 'download' | 'history' | 'watch' | 'batch' | 'profile';
@@ -76,7 +193,10 @@ else if (watch)     mode = 'watch';
 else if (batch)     mode = 'batch';
 else if (profile)   mode = 'profile';
 else if (url)       mode = 'download';
-else { cli.showHelp(0); process.exit(0); }
+else { printHelp(); process.exit(0); }
+
+// show help AFTER mode check so "xvd --help" still works
+if (help) { printHelp(); process.exit(0); }
 
 // ── Validate required args ────────────────────────────────────
 if (mode === 'batch' && !batch) {
@@ -100,7 +220,7 @@ const postProcess = (gif || watermark)
 // ── Render ────────────────────────────────────────────────────
 const { waitUntilExit } = render(
   <App
-    mode={mode}
+    mode={mode!}
     url={url}
     quality={quality}
     outputDir={output}
