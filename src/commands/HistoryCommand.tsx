@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text, useApp, useInput, useStdin } from 'ink';
 import { HistoryList } from '../components/HistoryList.js';
-import { loadHistory, type HistoryEntry } from '../lib/history.js';
+import { loadHistory, type HistoryEntry } from '../store/history.js';
 
 export const HistoryCommand: React.FC = () => {
   const { exit } = useApp();

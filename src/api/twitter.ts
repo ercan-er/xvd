@@ -1,10 +1,12 @@
+import { BROWSER_HEADERS } from './headers.js';
+
 export interface VideoVariant {
   url: string;
   contentType: 'video/mp4' | 'application/x-mpegURL';
   bitrate: number; // 0 for HLS
   width?: number;
   height?: number;
-  quality: string; // "1080p", "720p", "480p", "360p", "HLS"
+  quality: string; // e.g. "720p", "HLS"
 }
 
 export interface TweetData {
@@ -18,28 +20,16 @@ export interface TweetData {
   thumbnailUrl?: string;
 }
 
-const BROWSER_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
-    '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-  Accept: 'application/json, */*',
-};
-
-// ─────────────────────────────────────────────────────────────
-// Public entry-point
-// ─────────────────────────────────────────────────────────────
-
+/** Try syndication first, fall back to fxtwitter if it fails */
 export async function fetchTweetData(tweetId: string): Promise<TweetData> {
   const errors: string[] = [];
 
-  // 1️⃣ Twitter syndication API (embed endpoint – no auth required)
   try {
     return await fetchViaSyndication(tweetId);
   } catch (e) {
     errors.push(`Syndication: ${(e as Error).message}`);
   }
 
-  // 2️⃣ fxtwitter public API
   try {
     return await fetchViaFxTwitter(tweetId);
   } catch (e) {
@@ -49,16 +39,10 @@ export async function fetchTweetData(tweetId: string): Promise<TweetData> {
   throw new Error(`Could not fetch tweet.\n  ${errors.join('\n  ')}`);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Strategy 1 – Twitter Syndication API
-// ─────────────────────────────────────────────────────────────
-
 async function fetchViaSyndication(tweetId: string): Promise<TweetData> {
-  // The token parameter is not validated server-side (any number works)
+  // The token param isn't validated server-side — any number works
   const token = Math.floor(Math.random() * 999983) + 17;
-  const url =
-    `https://cdn.syndication.twimg.com/tweet-result` +
-    `?id=${tweetId}&token=${token}&lang=en`;
+  const url = `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&token=${token}&lang=en`;
 
   const res = await fetch(url, {
     headers: {
@@ -76,18 +60,17 @@ async function fetchViaSyndication(tweetId: string): Promise<TweetData> {
   if (!data || data.__typename === 'TweetTombstone')
     throw new Error('Tweet deleted or restricted');
 
-  const mediaDetails: unknown[] = data.mediaDetails ?? [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const videoMedia = (mediaDetails as any[]).find(
+  const videoMedia = (data.mediaDetails as any[] ?? []).find(
     (m) => m.type === 'video' || m.type === 'animated_gif',
   );
-
   if (!videoMedia) throw new Error('No video in this tweet');
 
-  const rawVariants: unknown[] = videoMedia.video_info?.variants ?? [];
-  const variants = parseSyndicationVariants(rawVariants, videoMedia.sizes);
-
-  if (variants.length === 0) throw new Error('No downloadable video variants found');
+  const variants = parseSyndicationVariants(
+    videoMedia.video_info?.variants ?? [],
+    videoMedia.sizes,
+  );
+  if (!variants.length) throw new Error('No downloadable video variants found');
 
   return {
     id: tweetId,
@@ -103,13 +86,13 @@ async function fetchViaSyndication(tweetId: string): Promise<TweetData> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseSyndicationVariants(raw: any[], sizes: any): VideoVariant[] {
-  const mp4 = raw
+  return raw
     .filter((v) => v.content_type === 'video/mp4' && typeof v.bitrate === 'number')
     .map((v) => {
-      // Try to derive resolution from the URL (…/1280x720/…)
-      const resMatch = (v.url as string).match(/\/(\d+)x(\d+)\//);
-      const w = resMatch ? parseInt(resMatch[1]) : sizes?.large?.w;
-      const h = resMatch ? parseInt(resMatch[2]) : sizes?.large?.h;
+      // Resolution is usually embedded in the URL like /1280x720/
+      const m = (v.url as string).match(/\/(\d+)x(\d+)\//);
+      const w = m ? parseInt(m[1]) : sizes?.large?.w;
+      const h = m ? parseInt(m[2]) : sizes?.large?.h;
       return {
         url: v.url as string,
         contentType: 'video/mp4' as const,
@@ -119,23 +102,17 @@ function parseSyndicationVariants(raw: any[], sizes: any): VideoVariant[] {
         quality: h ? `${h}p` : bitrateToQuality(v.bitrate as number),
       };
     })
-    .sort((a, b) => b.bitrate - a.bitrate); // best first
-
-  return mp4;
+    .sort((a, b) => b.bitrate - a.bitrate); // highest bitrate first
 }
 
-// ─────────────────────────────────────────────────────────────
-// Strategy 2 – fxtwitter (community mirror)
-// ─────────────────────────────────────────────────────────────
-
 async function fetchViaFxTwitter(tweetId: string): Promise<TweetData> {
-  const url = `https://api.fxtwitter.com/status/${tweetId}`;
-  const res = await fetch(url, { headers: BROWSER_HEADERS });
+  const res = await fetch(`https://api.fxtwitter.com/status/${tweetId}`, {
+    headers: BROWSER_HEADERS,
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = await res.json() as any;
-  const tweet = data.tweet;
+  const { tweet } = await res.json() as any;
   if (!tweet) throw new Error('No tweet data in response');
 
   const videos: VideoVariant[] = (tweet.media?.videos ?? []).map(
@@ -150,9 +127,7 @@ async function fetchViaFxTwitter(tweetId: string): Promise<TweetData> {
     }),
   );
 
-  if (videos.length === 0) throw new Error('No video in this tweet');
-
-  // Sort best first
+  if (!videos.length) throw new Error('No video in this tweet');
   videos.sort((a, b) => (b.height ?? 0) - (a.height ?? 0));
 
   return {
@@ -167,41 +142,32 @@ async function fetchViaFxTwitter(tweetId: string): Promise<TweetData> {
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
-
 function bitrateToQuality(bitrate: number): string {
   if (bitrate >= 2_000_000) return '720p';
   if (bitrate >= 800_000) return '480p';
   return '360p';
 }
 
-/** Pick the variant that best matches a quality string like "720p", "best", "worst" */
-export function selectVariant(
-  variants: VideoVariant[],
-  quality: string,
-): VideoVariant {
+/** Pick the variant closest to the requested quality string ("720p", "best", "worst") */
+export function selectVariant(variants: VideoVariant[], quality: string): VideoVariant {
   if (!variants.length) throw new Error('No variants available');
 
   const q = quality.toLowerCase();
   if (q === 'best' || q === '') return variants[0];
   if (q === 'worst') return variants[variants.length - 1];
 
-  // Height-based match e.g. "720p"
   const heightMatch = q.match(/^(\d+)p?$/);
   if (heightMatch) {
-    const targetH = parseInt(heightMatch[1]);
-    const exact = variants.find((v) => v.height === targetH);
+    const target = parseInt(heightMatch[1]);
+    const exact = variants.find((v) => v.height === target);
     if (exact) return exact;
-    // Pick closest
+    // Nothing exact — pick closest height
     return variants.reduce((prev, curr) =>
-      Math.abs((curr.height ?? 0) - targetH) <
-      Math.abs((prev.height ?? 0) - targetH)
+      Math.abs((curr.height ?? 0) - target) < Math.abs((prev.height ?? 0) - target)
         ? curr
         : prev,
     );
   }
 
-  return variants[0]; // fallback
+  return variants[0];
 }

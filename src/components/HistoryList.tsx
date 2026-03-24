@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import type { HistoryEntry } from '../lib/history.js';
+import type { HistoryEntry } from '../store/history.js';
 import { formatBytes, formatDate, formatDuration, truncate } from '../utils/format.js';
 import { existsSync } from 'fs';
 

@@ -13,9 +13,9 @@ export async function readClipboard(): Promise<string> {
 }
 
 /**
- * Start polling the clipboard every `intervalMs` ms.
- * Calls `onNewUrl` whenever a new X/Twitter URL is copied.
- * Returns a function that stops the watcher.
+ * Polls the clipboard every `intervalMs` ms and calls `onNewUrl`
+ * whenever a new X/Twitter video URL appears.
+ * Returns a stop function.
  */
 export function startClipboardWatcher(
   onNewUrl: (url: string) => void,
@@ -29,11 +29,11 @@ export function startClipboardWatcher(
       last = current;
       onNewUrl(current);
     } else if (current !== last) {
-      last = current; // track even non-Twitter changes
+      last = current;
     }
   }, intervalMs);
 
-  // Prime the last value immediately to avoid firing on existing clipboard content
+  // Seed `last` immediately so we don't fire on whatever's already in the clipboard
   readClipboard().then((v) => { last = v.trim(); }).catch(() => {});
 
   return () => clearInterval(id);

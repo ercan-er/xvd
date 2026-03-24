@@ -4,11 +4,11 @@ import { Spinner } from '../components/Spinner.js';
 import { TweetCard } from '../components/TweetCard.js';
 import { ProgressBar } from '../components/ProgressBar.js';
 import { QualitySelector } from '../components/QualitySelector.js';
-import { fetchTweetData, selectVariant, type TweetData, type VideoVariant } from '../lib/twitter.js';
-import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress, type PostProcessOptions } from '../lib/download.js';
-import { addEntry, getFileSize } from '../lib/history.js';
+import { fetchTweetData, selectVariant, type TweetData, type VideoVariant } from '../api/twitter.js';
+import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress, type PostProcessOptions } from '../media/download.js';
+import { addEntry, getFileSize } from '../store/history.js';
 import { extractTweetId, resolveShortUrl } from '../utils/url.js';
-import { notifyDownloadDone } from '../lib/notify.js';
+import { notifyDownloadDone } from '../platform/notify.js';
 import path from 'path';
 
 // ─── State machine ────────────────────────────────────────────

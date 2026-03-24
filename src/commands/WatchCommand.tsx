@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useReducer, useRef } from 'react';
 import { Box, Text, useApp, useInput, useStdin } from 'ink';
 import { Spinner } from '../components/Spinner.js';
 import { ProgressBar } from '../components/ProgressBar.js';
-import { fetchTweetData, selectVariant } from '../lib/twitter.js';
-import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress } from '../lib/download.js';
-import { addEntry, getFileSize } from '../lib/history.js';
+import { fetchTweetData, selectVariant } from '../api/twitter.js';
+import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress } from '../media/download.js';
+import { addEntry, getFileSize } from '../store/history.js';
 import { extractTweetId } from '../utils/url.js';
-import { startClipboardWatcher } from '../lib/clipboard.js';
-import { notifyDownloadDone } from '../lib/notify.js';
+import { startClipboardWatcher } from '../platform/clipboard.js';
+import { notifyDownloadDone } from '../platform/notify.js';
 import { formatBytes } from '../utils/format.js';
 import path from 'path';
 

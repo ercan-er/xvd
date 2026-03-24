@@ -18,9 +18,9 @@ export interface HistoryEntry {
   downloadedAt: string; // ISO string
 }
 
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'xvd');
+const CONFIG_DIR   = path.join(os.homedir(), '.config', 'xvd');
 const HISTORY_FILE = path.join(CONFIG_DIR, 'history.json');
-const MAX_ENTRIES = 200;
+const MAX_ENTRIES  = 200;
 
 function ensureDir(): void {
   if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true });
@@ -32,12 +32,13 @@ export function loadHistory(): HistoryEntry[] {
   try {
     return JSON.parse(readFileSync(HISTORY_FILE, 'utf-8')) as HistoryEntry[];
   } catch {
-    return [];
+    return []; // corrupted file — start fresh
   }
 }
 
 export function addEntry(entry: HistoryEntry): void {
   ensureDir();
+  // Remove any existing entry for the same tweet + quality before prepending
   const history = loadHistory().filter(
     (h) => !(h.tweetId === entry.tweetId && h.quality === entry.quality),
   );
@@ -45,7 +46,6 @@ export function addEntry(entry: HistoryEntry): void {
   writeFileSync(HISTORY_FILE, JSON.stringify(history.slice(0, MAX_ENTRIES), null, 2));
 }
 
-/** Return file size in bytes, or 0 if file doesn't exist */
 export function getFileSize(filePath: string): number {
   try {
     return statSync(filePath).size;

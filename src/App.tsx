@@ -6,7 +6,7 @@ import { HistoryCommand } from './commands/HistoryCommand.js';
 import { WatchCommand } from './commands/WatchCommand.js';
 import { BatchCommand } from './commands/BatchCommand.js';
 import { ProfileCommand } from './commands/ProfileCommand.js';
-import type { PostProcessOptions } from './lib/download.js';
+import type { PostProcessOptions } from './media/download.js';
 
 export type AppMode = 'download' | 'history' | 'watch' | 'batch' | 'profile';
 

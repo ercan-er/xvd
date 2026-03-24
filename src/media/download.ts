@@ -8,9 +8,9 @@ import { ffmpegAvailable, convertToGif, addWatermark, type WatermarkPosition } f
 export interface DownloadProgress {
   downloaded: number;
   total: number;
-  speed: number;       // bytes per second (rolling avg)
+  speed: number;       // bytes/s, rolling average
   percentage: number;
-  phase?: 'mp4' | 'hls' | 'gif' | 'watermark';  // current post-processing step
+  phase?: 'mp4' | 'hls' | 'gif' | 'watermark';
 }
 
 export type ProgressCallback = (p: DownloadProgress) => void;
@@ -19,14 +19,12 @@ export interface PostProcessOptions {
   gif?: boolean;
   gifFps?: number;
   gifWidth?: number;
-  watermark?: string;           // path to PNG file
+  watermark?: string;           // path to PNG
   watermarkPos?: WatermarkPosition;
-  watermarkSize?: number;       // width in px to scale watermark (default: 150)
-  watermarkOpacity?: number;    // 0.0 – 1.0 (default: 0.7)
+  watermarkSize?: number;       // px width to scale to (default: 150)
+  watermarkOpacity?: number;    // 0.0–1.0 (default: 0.7)
   notify?: boolean;
 }
-
-// ─── MP4 download (direct streaming) ─────────────────────────
 
 async function downloadMp4(
   url: string,
@@ -47,7 +45,6 @@ async function downloadMp4(
 
   const total = parseInt(response.headers.get('content-length') ?? '0', 10);
   let downloaded = 0;
-
   let windowStart = Date.now();
   let windowBytes = 0;
   let speed = 0;
@@ -64,14 +61,13 @@ async function downloadMp4(
         writer.write(value, (err) => (err ? reject(err) : resolve()));
       });
 
-      downloaded += value.length;
+      downloaded  += value.length;
       windowBytes += value.length;
 
-      const now = Date.now();
-      const elapsed = (now - windowStart) / 1000;
+      const elapsed = (Date.now() - windowStart) / 1000;
       if (elapsed >= 0.8) {
-        speed = windowBytes / elapsed;
-        windowStart = now;
+        speed       = windowBytes / elapsed;
+        windowStart = Date.now();
         windowBytes = 0;
       }
 
@@ -96,8 +92,6 @@ async function downloadMp4(
   }
 }
 
-// ─── Main entry point ─────────────────────────────────────────
-
 export async function downloadVideo(
   url: string,
   outputDir: string,
@@ -106,10 +100,9 @@ export async function downloadVideo(
   postProcess?: PostProcessOptions,
 ): Promise<string> {
   await mkdir(outputDir, { recursive: true });
-  const filePath = path.join(outputDir, filename);
+  const filePath  = path.join(outputDir, filename);
   const hasFfmpeg = ffmpegAvailable();
 
-  // ── Download ──────────────────────────────────────────────
   if (isHlsUrl(url)) {
     if (!hasFfmpeg) {
       throw new Error(
@@ -121,13 +114,7 @@ export async function downloadVideo(
     let hlsTotal = 0;
     await downloadHls(url, filePath, (p: HlsProgress) => {
       if (!hlsTotal) hlsTotal = p.total;
-      onProgress?.({
-        downloaded: p.segment,
-        total: hlsTotal,
-        speed: 0,
-        percentage: p.percentage,
-        phase: 'hls',
-      });
+      onProgress?.({ downloaded: p.segment, total: hlsTotal, speed: 0, percentage: p.percentage, phase: 'hls' });
     });
   } else {
     await downloadMp4(url, filePath, onProgress);
@@ -135,7 +122,6 @@ export async function downloadVideo(
 
   let finalPath = filePath;
 
-  // ── Watermark ─────────────────────────────────────────────
   if (postProcess?.watermark) {
     if (!hasFfmpeg) throw new Error('Watermark requires ffmpeg. Install it first.');
     onProgress?.({ downloaded: 0, total: 1, speed: 0, percentage: 0, phase: 'watermark' });
@@ -149,7 +135,6 @@ export async function downloadVideo(
     onProgress?.({ downloaded: 1, total: 1, speed: 0, percentage: 100, phase: 'watermark' });
   }
 
-  // ── GIF conversion ────────────────────────────────────────
   if (postProcess?.gif) {
     if (!hasFfmpeg) throw new Error('GIF conversion requires ffmpeg. Install it first.');
     onProgress?.({ downloaded: 0, total: 1, speed: 0, percentage: 0, phase: 'gif' });
@@ -163,23 +148,14 @@ export async function downloadVideo(
   return finalPath;
 }
 
-// ─── Utility exports ──────────────────────────────────────────
-
 export function defaultOutputDir(): string {
   const home = os.homedir();
-  const candidates = [
-    path.join(home, 'Movies'),
-    path.join(home, 'Videos'),
-    path.join(home, 'Downloads'),
-    home,
-  ];
-  for (const c of candidates) {
-    if (existsSync(c)) return c;
+  for (const candidate of [path.join(home, 'Movies'), path.join(home, 'Videos'), path.join(home, 'Downloads'), home]) {
+    if (existsSync(candidate)) return candidate;
   }
   return home;
 }
 
 export function buildFilename(tweetId: string, quality: string): string {
-  const q = quality.replace(/[^a-zA-Z0-9]/g, '');
-  return `xvd_${tweetId}_${q}.mp4`;
+  return `xvd_${tweetId}_${quality.replace(/[^a-zA-Z0-9]/g, '')}.mp4`;
 }

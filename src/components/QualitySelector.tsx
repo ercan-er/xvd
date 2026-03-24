@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useStdin } from 'ink';
-import type { VideoVariant } from '../lib/twitter.js';
+import type { VideoVariant } from '../api/twitter.js';
 import { formatBytes } from '../utils/format.js';
 
 interface Props {

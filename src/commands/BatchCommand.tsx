@@ -1,12 +1,13 @@
 import React, { useEffect, useReducer, useRef } from 'react';
 import { Box, Text, useApp } from 'ink';
 import pLimit from 'p-limit';
-import { fetchTweetData, selectVariant } from '../lib/twitter.js';
-import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress } from '../lib/download.js';
-import { addEntry, getFileSize } from '../lib/history.js';
+import { fetchTweetData, selectVariant } from '../api/twitter.js';
+import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress } from '../media/download.js';
+import { addEntry, getFileSize } from '../store/history.js';
 import { extractTweetId } from '../utils/url.js';
-import { notifyBatchDone } from '../lib/notify.js';
+import { notifyBatchDone } from '../platform/notify.js';
 import { formatBytes, formatSpeed, formatEta } from '../utils/format.js';
+import { miniBar } from '../utils/bar.js';
 import { readFileSync, existsSync } from 'fs';
 import path from 'path';
 
@@ -69,16 +70,6 @@ function parseUrlsFromFile(filePath: string): string[] {
   return [...new Set(lines)];
 }
 
-// ─── Bar helper ───────────────────────────────────────────────
-
-const BAR_W = 16;
-const FILL = '█';
-const EMPTY = '░';
-
-function miniBar(pct: number): string {
-  const f = Math.round((pct / 100) * BAR_W);
-  return FILL.repeat(f) + EMPTY.repeat(BAR_W - f);
-}
 
 function phaseIcon(phase: BatchPhase): string {
   return { waiting: '◌', fetching: '⟳', downloading: '⬇', done: '✓', skip: '⊘', error: '✗' }[phase];

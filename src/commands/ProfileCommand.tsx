@@ -1,13 +1,14 @@
 import React, { useEffect, useReducer, useRef } from 'react';
 import { Box, Text, useApp } from 'ink';
 import pLimit from 'p-limit';
-import { fetchProfileVideoTweets } from '../lib/profile.js';
-import { fetchTweetData, selectVariant } from '../lib/twitter.js';
-import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress } from '../lib/download.js';
-import { addEntry, getFileSize } from '../lib/history.js';
-import { notifyBatchDone } from '../lib/notify.js';
+import { fetchProfileVideoTweets } from '../api/profile.js';
+import { fetchTweetData, selectVariant } from '../api/twitter.js';
+import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress } from '../media/download.js';
+import { addEntry, getFileSize } from '../store/history.js';
+import { notifyBatchDone } from '../platform/notify.js';
 import { Spinner } from '../components/Spinner.js';
 import { formatBytes, formatSpeed, formatEta, truncate } from '../utils/format.js';
+import { miniBar } from '../utils/bar.js';
 import path from 'path';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -59,13 +60,6 @@ function reducer(s: State, a: Action): State {
   }
 }
 
-// ─── Mini-bar ─────────────────────────────────────────────────
-
-const BAR_W = 14;
-function miniBar(pct: number): string {
-  const f = Math.round((pct / 100) * BAR_W);
-  return '█'.repeat(f) + '░'.repeat(BAR_W - f);
-}
 
 // ─── Component ────────────────────────────────────────────────
 
@@ -229,7 +223,7 @@ export const ProfileCommand: React.FC<Props> = ({
                 )}
                 {isActive && p ? (
                   <>
-                    <Text color="cyan">{miniBar(pct)}</Text>
+                    <Text color="cyan">{miniBar(pct, 14)}</Text>
                     <Text color="white" bold>{String(pct).padStart(3)}%</Text>
                     <Text color="#555555">{formatSpeed(p.speed)}</Text>
                     {p.total > 0 && (

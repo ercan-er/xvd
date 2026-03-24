@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import type { DownloadProgress } from '../lib/download.js';
+import type { DownloadProgress } from '../media/download.js';
 import { formatBytes, formatSpeed, formatEta } from '../utils/format.js';
 
 const BAR_WIDTH = 38;

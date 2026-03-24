@@ -3,7 +3,7 @@ import { render } from 'ink';
 import meow from 'meow';
 import chalk from 'chalk';
 import { App } from './App.js';
-import type { WatermarkPosition } from './lib/ffmpeg.js';
+import type { WatermarkPosition } from './media/ffmpeg.js';
 
 // ── Beautiful help screen ─────────────────────────────────────
 

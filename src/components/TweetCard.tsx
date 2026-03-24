@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import type { TweetData, VideoVariant } from '../lib/twitter.js';
+import type { TweetData, VideoVariant } from '../api/twitter.js';
 import { formatDuration, truncate } from '../utils/format.js';
 
 interface Props {
