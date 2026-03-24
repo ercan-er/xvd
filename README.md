@@ -47,7 +47,7 @@ xvd https://x.com/NASA/status/1902118174591521056
 ## 💻 Install
 
 ```bash
-npm install -g xvd
+npm install -g xvd-cli
 ```
 
 That's it. No Python, no yt-dlp, no API key.
