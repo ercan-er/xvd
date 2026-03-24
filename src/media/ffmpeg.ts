@@ -102,3 +102,29 @@ export async function addWatermark(
 export async function concatSegments(listPath: string, outputPath: string): Promise<void> {
   await run(['-f', 'concat', '-safe', '0', '-i', listPath, '-c', 'copy', outputPath]);
 }
+
+/**
+ * Burn an .srt subtitle file into the video.
+ * Replaces the original file in-place.
+ */
+export async function burnSubtitles(videoPath: string, srtPath: string): Promise<string> {
+  const dir     = path.dirname(videoPath);
+  const base    = path.basename(videoPath, path.extname(videoPath));
+  const outPath = path.join(dir, `${base}_sub.mp4`);
+
+  // Forward slashes + escaped colons keep the filter syntax valid on all platforms
+  const srtEscaped = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+
+  await run([
+    '-i', videoPath,
+    '-vf', `subtitles='${srtEscaped}':force_style='FontName=Arial,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1'`,
+    '-c:a', 'copy',
+    outPath,
+  ]);
+
+  const { renameSync, unlinkSync } = await import('fs');
+  unlinkSync(videoPath);
+  renameSync(outPath, videoPath);
+
+  return videoPath;
+}

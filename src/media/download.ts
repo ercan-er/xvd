@@ -1,19 +1,28 @@
 import { createWriteStream, existsSync, unlinkSync } from 'fs';
-import { mkdir } from 'fs/promises';
+import { mkdir, writeFile, unlink } from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { isHlsUrl, downloadHls, type HlsProgress } from './hls.js';
-import { ffmpegAvailable, convertToGif, addWatermark, type WatermarkPosition } from './ffmpeg.js';
+import { ffmpegAvailable, convertToGif, addWatermark, burnSubtitles, type WatermarkPosition } from './ffmpeg.js';
+import { type SubtitleTrack, fetchSubtitleContent } from '../api/subtitles.js';
+import { translateSrt } from './translate.js';
 
 export interface DownloadProgress {
   downloaded: number;
   total: number;
   speed: number;       // bytes/s, rolling average
   percentage: number;
-  phase?: 'mp4' | 'hls' | 'gif' | 'watermark';
+  phase?: 'mp4' | 'hls' | 'gif' | 'watermark' | 'subtitle';
 }
 
 export type ProgressCallback = (p: DownloadProgress) => void;
+
+export interface SubtitleOptions {
+  targetLang: string;
+  sourceLang?: string;          // auto-detected if omitted
+  libreUrl?: string;            // LibreTranslate server, falls back to MyMemory if absent/down
+  tracks: SubtitleTrack[];      // available tracks from the tweet
+}
 
 export interface PostProcessOptions {
   gif?: boolean;
@@ -23,6 +32,7 @@ export interface PostProcessOptions {
   watermarkPos?: WatermarkPosition;
   watermarkSize?: number;       // px width to scale to (default: 150)
   watermarkOpacity?: number;    // 0.0–1.0 (default: 0.7)
+  subtitle?: SubtitleOptions;
   notify?: boolean;
 }
 
@@ -143,6 +153,51 @@ export async function downloadVideo(
       width: postProcess.gifWidth,
     });
     onProgress?.({ downloaded: 1, total: 1, speed: 0, percentage: 100, phase: 'gif' });
+  }
+
+  if (postProcess?.subtitle) {
+    if (!hasFfmpeg) throw new Error('Subtitle burning requires ffmpeg. Install it first.');
+    const { targetLang, sourceLang = 'auto', libreUrl, tracks } = postProcess.subtitle;
+
+    // pick the best matching track: exact lang match → source lang → first available
+    const track =
+      tracks.find((t) => t.language === targetLang) ??
+      tracks.find((t) => t.language.startsWith(sourceLang === 'auto' ? 'en' : sourceLang)) ??
+      tracks[0];
+
+    if (!track) throw new Error('No subtitle tracks found for this video.');
+
+    onProgress?.({ downloaded: 0, total: 1, speed: 0, percentage: 0, phase: 'subtitle' });
+
+    let srtContent = await fetchSubtitleContent(track.url);
+
+    // translate only when the track language differs from what the user wants
+    if (track.language !== targetLang) {
+      srtContent = await translateSrt(
+        srtContent,
+        targetLang,
+        track.language,
+        libreUrl,
+        (done, total) => onProgress?.({
+          downloaded: done,
+          total,
+          speed: 0,
+          percentage: Math.round((done / total) * 100),
+          phase: 'subtitle',
+        }),
+      );
+    }
+
+    // write to a temp file, burn, then clean up
+    const srtPath = path.join(os.tmpdir(), `xvd_sub_${Date.now()}.srt`);
+    await writeFile(srtPath, srtContent, 'utf-8');
+    try {
+      await burnSubtitles(finalPath, srtPath);
+    } finally {
+      await unlink(srtPath).catch(() => {});
+    }
+
+    onProgress?.({ downloaded: 1, total: 1, speed: 0, percentage: 100, phase: 'subtitle' });
   }
 
   return finalPath;

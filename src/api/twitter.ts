@@ -1,4 +1,5 @@
 import { BROWSER_HEADERS } from './headers.js';
+import { extractSubtitleTracks, type SubtitleTrack } from './subtitles.js';
 
 export interface VideoVariant {
   url: string;
@@ -18,6 +19,7 @@ export interface TweetData {
   videoVariants: VideoVariant[];
   duration?: number; // milliseconds
   thumbnailUrl?: string;
+  subtitleTracks: SubtitleTrack[];
 }
 
 /** Try syndication first, fall back to fxtwitter if it fails */
@@ -81,6 +83,7 @@ async function fetchViaSyndication(tweetId: string): Promise<TweetData> {
     videoVariants: variants,
     duration: videoMedia.video_info?.duration_millis as number | undefined,
     thumbnailUrl: videoMedia.media_url_https as string | undefined,
+    subtitleTracks: extractSubtitleTracks(videoMedia.video_info),
   };
 }
 
@@ -139,6 +142,11 @@ async function fetchViaFxTwitter(tweetId: string): Promise<TweetData> {
     videoVariants: videos,
     duration: tweet.media?.duration ? tweet.media.duration * 1000 : undefined,
     thumbnailUrl: tweet.media?.thumbnail_url,
+    // fxtwitter exposes subtitles as { lang: url } map under media.subtitles
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subtitleTracks: Object.entries((tweet.media?.subtitles ?? {}) as any)
+      .filter(([, url]) => typeof url === 'string')
+      .map(([lang, url]) => ({ language: lang.toLowerCase(), url: url as string })),
   };
 }
 

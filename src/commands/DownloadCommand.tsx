@@ -5,7 +5,7 @@ import { TweetCard } from '../components/TweetCard.js';
 import { ProgressBar } from '../components/ProgressBar.js';
 import { QualitySelector } from '../components/QualitySelector.js';
 import { fetchTweetData, selectVariant, type TweetData, type VideoVariant } from '../api/twitter.js';
-import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress, type PostProcessOptions } from '../media/download.js';
+import { downloadVideo, defaultOutputDir, buildFilename, type DownloadProgress, type PostProcessOptions, type SubtitleOptions } from '../media/download.js';
 import { addEntry, getFileSize } from '../store/history.js';
 import { extractTweetId, resolveShortUrl } from '../utils/url.js';
 import { notifyDownloadDone } from '../platform/notify.js';
@@ -73,9 +73,11 @@ interface Props {
   quality: string;
   postProcess?: PostProcessOptions;
   sendNotify?: boolean;
+  subtitleLang?: string;   // target language code, e.g. "tr"
+  libreUrl?: string;       // LibreTranslate server URL
 }
 
-export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, postProcess, sendNotify = false }) => {
+export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, postProcess, sendNotify = false, subtitleLang, libreUrl }) => {
   const { exit } = useApp();
   const [state, dispatch] = useReducer(reducer, { phase: 'resolving' });
 
@@ -86,12 +88,21 @@ export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, p
       const outDir = outputDir ?? defaultOutputDir();
       const filename = buildFilename(tweet.id, variant.quality);
 
+      // merge subtitle track info from the fetched tweet into postProcess
+      const subtitleOpts: SubtitleOptions | undefined =
+        subtitleLang && tweet.subtitleTracks.length
+          ? { targetLang: subtitleLang, libreUrl, tracks: tweet.subtitleTracks }
+          : undefined;
+
+      const effectivePostProcess: PostProcessOptions | undefined =
+        subtitleOpts ? { ...postProcess, subtitle: subtitleOpts } : postProcess;
+
       const filePath = await downloadVideo(
         variant.url,
         outDir,
         filename,
         (p) => dispatch({ type: 'PROGRESS', progress: p }),
-        postProcess,
+        effectivePostProcess,
       );
 
       addEntry({
@@ -113,7 +124,7 @@ export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, p
       if (sendNotify) notifyDownloadDone(tweet.authorUsername, path.basename(filePath));
       dispatch({ type: 'DONE', filePath });
     },
-    [outputDir, postProcess, sendNotify],
+    [outputDir, postProcess, sendNotify, subtitleLang, libreUrl],
   );
 
   // ── Main effect ──────────────────────────────────────────────
@@ -215,6 +226,7 @@ export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, p
           ph === 'hls'       ? 'Downloading HLS segments…' :
           ph === 'gif'       ? 'Converting to GIF…' :
           ph === 'watermark' ? 'Applying watermark…' :
+          ph === 'subtitle'  ? 'Translating & burning subtitles…' :
                                'Downloading…';
         return (
           <Box flexDirection="column">
