@@ -42,7 +42,20 @@
     "x",
     "video",
     "downloader",
-    "cli"
+    "cli",
+    "tui",
+    "batch",
+    "gif",
+    "hls",
+    "watch"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ercan-er/xvd.git"
+  },
+  "homepage": "https://github.com/ercan-er/xvd#readme",
+  "bugs": {
+    "url": "https://github.com/ercan-er/xvd/issues"
+  }
 }

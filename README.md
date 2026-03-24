@@ -11,11 +11,12 @@
 
 **Download X / Twitter videos from your terminal beautifully.**
 
-[npm version](https://www.npmjs.com/package/xvd)
-[npm downloads](https://www.npmjs.com/package/xvd)
-[License: MIT](LICENSE)
-[Node ≥ 18](https://nodejs.org)
-[PRs welcome](CONTRIBUTING.md)
+[![npm version](https://img.shields.io/npm/v/xvd?color=cyan&style=flat-square)](https://www.npmjs.com/package/xvd)
+[![npm downloads](https://img.shields.io/npm/dm/xvd?color=cyan&style=flat-square)](https://www.npmjs.com/package/xvd)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Node ≥ 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square)](https://nodejs.org)
+[![GitHub stars](https://img.shields.io/github/stars/ercan-er/xvd?color=yellow&style=flat-square)](https://github.com/ercan-er/xvd/stargazers)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4?style=flat-square)](https://github.com/ercan-er/xvd/issues)
 
 
 
@@ -43,7 +44,7 @@ xvd https://x.com/NASA/status/1902118174591521056
 
 ---
 
-## 🚀 Install
+## 💻 Install
 
 ```bash
 npm install -g xvd
@@ -54,7 +55,7 @@ That's it. No Python, no yt-dlp, no API key.
 
 ---
 
-## 💡 Usage
+## 📗 Usage
 
 ### Download a single video
 
@@ -263,7 +264,7 @@ winget install ffmpeg
 ## 🛠 Build from source
 
 ```bash
-git clone https://github.com/yourname/xvd
+git clone https://github.com/ercan-er/xvd
 cd xvd
 npm install
 npm run build
@@ -312,7 +313,7 @@ No telemetry. No tracking. All history is stored locally.
 Pull requests are welcome! Please open an issue first for large changes.
 
 ```bash
-git clone https://github.com/yourname/xvd
+git clone https://github.com/ercan-er/xvd
 cd xvd
 npm install
 npm run dev -- https://x.com/NASA/status/1902118174591521056
