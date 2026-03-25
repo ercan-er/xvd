@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xvd — Download X / Twitter videos from your terminal</title>
+  <meta name="description" content="Download X / Twitter videos from your terminal. One command. No API key. No browser extension. Supports GIF, watermark, subtitles, batch downloads and more." />
+  <meta property="og:title" content="xvd — X / Twitter Video Downloader CLI" />
+  <meta property="og:description" content="One command. Any X video. No API key. No nonsense." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── NAV ─────────────────────────────────────── -->
+  <nav>
+    <span class="nav-logo">xvd</span>
+    <div class="nav-links">
+      <a href="https://github.com/ercan-er/xvd-cli" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.745 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        GitHub
+      </a>
+      <a href="https://www.npmjs.com/package/xvd-cli" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474C23.214 24 24 23.214 24 22.237V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L11.84 19.17H5.113z"/></svg>
+        npm
+      </a>
+    </div>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="badge">TypeScript · Node 18+ · MIT</div>
+      <h1>
+        Download X&nbsp;/ Twitter<br />
+        videos from your&nbsp;<span class="accent">terminal.</span>
+      </h1>
+      <p class="tagline">
+        One command. Any video. No API key. No browser extension. No nonsense.
+      </p>
+
+      <div class="install-box">
+        <span class="install-prompt">$</span>
+        <code id="install-cmd">npm install -g xvd-cli</code>
+        <button id="copy-btn" onclick="copyInstall()" aria-label="Copy install command">
+          <svg id="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          <svg id="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="copy-label">Copy</span>
+        </button>
+      </div>
+
+      <div class="hero-actions">
+        <a class="btn-primary" href="https://github.com/ercan-er/xvd-cli" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.745 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          View on GitHub
+        </a>
+        <a class="btn-secondary" href="https://www.npmjs.com/package/xvd-cli" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474C23.214 24 24 23.214 24 22.237V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L11.84 19.17H5.113z"/></svg>
+          View on npm
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TERMINAL DEMO ─────────────────────────────── -->
+  <section class="demo-section">
+    <div class="terminal" id="terminal">
+      <div class="terminal-bar">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <span class="terminal-title">zsh</span>
+      </div>
+      <div class="terminal-body" id="terminal-body">
+        <!-- lines injected by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ─────────────────────────────────── -->
+  <section class="features-section">
+    <h2>Everything you need</h2>
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon">⬇</div>
+        <h3>Single download</h3>
+        <p>Paste any X / Twitter video URL and get the highest quality MP4 instantly.</p>
+        <code>xvd https://x.com/user/status/…</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>Batch download</h3>
+        <p>Feed a text file full of URLs. Up to 8 parallel downloads, progress per line.</p>
+        <code>xvd --batch urls.txt -c 8</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">👁</div>
+        <h3>Watch mode</h3>
+        <p>Copy any X link to your clipboard — xvd auto-downloads it in the background.</p>
+        <code>xvd --watch -o ~/Videos</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎞</div>
+        <h3>GIF conversion</h3>
+        <p>Convert any video to a high-quality animated GIF with one flag.</p>
+        <code>xvd URL --gif</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">💧</div>
+        <h3>Watermark</h3>
+        <p>Burn a PNG logo into the video at any corner with custom size and opacity.</p>
+        <code>xvd URL --watermark logo.png</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔤</div>
+        <h3>Subtitles</h3>
+        <p>Fetch caption tracks, translate to any language, and burn permanently into the video.</p>
+        <code>xvd URL --subtitle tr</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎙</div>
+        <h3>Transcription</h3>
+        <p>No captions? Transcribe audio via OpenAI Whisper and burn subtitles automatically.</p>
+        <code>OPENAI_API_KEY=sk-… xvd URL --subtitle tr</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">👤</div>
+        <h3>Profile scraping</h3>
+        <p>Download every video from a profile. Filter by date or keyword.</p>
+        <code>xvd --profile @NASA --from 2024-01-01</code>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🕑</div>
+        <h3>History</h3>
+        <p>Browse everything you've downloaded with an interactive terminal UI.</p>
+        <code>xvd --history</code>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ──────────────────────────────── -->
+  <section class="how-section">
+    <h2>Up and running in 30 seconds</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Install</h3>
+        <p>Requires Node 18+. ffmpeg optional.</p>
+        <div class="step-code"><code>npm install -g xvd-cli</code></div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Paste URL</h3>
+        <p>Any public X / Twitter video link.</p>
+        <div class="step-code"><code>xvd https://x.com/…</code></div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Done</h3>
+        <p>MP4 saved to ~/Movies automatically.</p>
+        <div class="step-code"><code>✓ Download complete</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── QUALITY TABLE ─────────────────────────────── -->
+  <section class="quality-section">
+    <h2>Quality presets</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Flag</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>best</code> <span class="tag">default</span></td><td>Highest resolution available</td></tr>
+          <tr><td><code>720p</code></td><td>HD — good balance of size / quality</td></tr>
+          <tr><td><code>480p</code></td><td>SD — smaller file</td></tr>
+          <tr><td><code>360p</code></td><td>Low — fastest download</td></tr>
+          <tr><td><code>worst</code></td><td>Smallest available</td></tr>
+          <tr><td><code>ask</code></td><td>Interactive picker in terminal</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ────────────────────────────────────── -->
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-logo">xvd</span>
+      <div class="footer-links">
+        <a href="https://github.com/ercan-er/xvd-cli" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/package/xvd-cli" target="_blank" rel="noopener">npm</a>
+        <a href="https://github.com/ercan-er/xvd-cli/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        <a href="https://github.com/ercan-er/xvd-cli/issues" target="_blank" rel="noopener">Issues</a>
+      </div>
+      <p class="footer-copy">Built with TypeScript · No telemetry · All history stored locally</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

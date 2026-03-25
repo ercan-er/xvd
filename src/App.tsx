@@ -20,6 +20,7 @@ interface Props {
   sendNotify: boolean;
   subtitleLang?: string;
   libreUrl?: string;
+  whisperUrl?: string;
   // batch
   batchFile?: string;
   concurrent: number;
@@ -39,6 +40,7 @@ export const App: React.FC<Props> = ({
   sendNotify,
   subtitleLang,
   libreUrl,
+  whisperUrl,
   batchFile,
   concurrent,
   profileUser,
@@ -57,6 +59,7 @@ export const App: React.FC<Props> = ({
         sendNotify={sendNotify}
         subtitleLang={subtitleLang}
         libreUrl={libreUrl}
+        whisperUrl={whisperUrl}
       />
     )}
     {mode === 'history' && <HistoryCommand />}

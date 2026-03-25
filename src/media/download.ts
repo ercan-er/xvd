@@ -6,6 +6,7 @@ import { isHlsUrl, downloadHls, type HlsProgress } from './hls.js';
 import { ffmpegAvailable, convertToGif, addWatermark, burnSubtitles, type WatermarkPosition } from './ffmpeg.js';
 import { type SubtitleTrack, fetchSubtitleContent } from '../api/subtitles.js';
 import { translateSrt } from './translate.js';
+import { transcribeToSrt, resolveWhisperConfig } from './transcribe.js';
 
 export interface DownloadProgress {
   downloaded: number;
@@ -21,6 +22,7 @@ export interface SubtitleOptions {
   targetLang: string;
   sourceLang?: string;          // auto-detected if omitted
   libreUrl?: string;            // LibreTranslate server, falls back to MyMemory if absent/down
+  whisperUrl?: string;          // Whisper-compatible API for transcription when no tracks exist
   tracks: SubtitleTrack[];      // available tracks from the tweet
 }
 
@@ -157,26 +159,51 @@ export async function downloadVideo(
 
   if (postProcess?.subtitle) {
     if (!hasFfmpeg) throw new Error('Subtitle burning requires ffmpeg. Install it first.');
-    const { targetLang, sourceLang = 'auto', libreUrl, tracks } = postProcess.subtitle;
+    const { targetLang, sourceLang = 'auto', libreUrl, whisperUrl, tracks } = postProcess.subtitle;
 
-    // pick the best matching track: exact lang match → source lang → first available
+    onProgress?.({ downloaded: 0, total: 1, speed: 0, percentage: 0, phase: 'subtitle' });
+
+    // pick the best matching existing track, or fall through to Whisper transcription
     const track =
       tracks.find((t) => t.language === targetLang) ??
       tracks.find((t) => t.language.startsWith(sourceLang === 'auto' ? 'en' : sourceLang)) ??
       tracks[0];
 
-    if (!track) throw new Error('No subtitle tracks found for this video.');
+    let srtContent: string;
+    let trackLang: string;
 
-    onProgress?.({ downloaded: 0, total: 1, speed: 0, percentage: 0, phase: 'subtitle' });
+    if (track) {
+      // use the existing caption track from Twitter
+      srtContent = await fetchSubtitleContent(track.url);
+      trackLang  = track.language;
+    } else {
+      // no track — resolve Whisper endpoint: explicit flag → XVD_WHISPER_URL env → OPENAI_API_KEY env
+      const whisperCfg = whisperUrl
+        ? { url: whisperUrl, apiKey: undefined }
+        : resolveWhisperConfig();
 
-    let srtContent = await fetchSubtitleContent(track.url);
+      if (!whisperCfg) {
+        throw new Error(
+          'No subtitle tracks found for this video.\n' +
+          '  Set OPENAI_API_KEY to transcribe automatically via OpenAI Whisper.',
+        );
+      }
 
-    // translate only when the track language differs from what the user wants
-    if (track.language !== targetLang) {
+      srtContent = await transcribeToSrt(
+        finalPath,
+        whisperCfg.url,
+        sourceLang === 'auto' ? undefined : sourceLang,
+        whisperCfg.apiKey,
+      );
+      trackLang = sourceLang === 'auto' ? targetLang : sourceLang;
+    }
+
+    // translate only when the source language differs from what the user wants
+    if (trackLang !== targetLang) {
       srtContent = await translateSrt(
         srtContent,
         targetLang,
-        track.language,
+        trackLang,
         libreUrl,
         (done, total) => onProgress?.({
           downloaded: done,

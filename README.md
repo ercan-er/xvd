@@ -162,7 +162,7 @@ Positions: `top-left` `top-right` `bottom-left` `bottom-right` `center`
 
 ### `--subtitle` — Burn subtitles in any language
 
-If the tweet has subtitle tracks (many news accounts and long-form videos do), `xvd` can fetch them, translate to any language, and burn them permanently into the video.
+`xvd` can fetch subtitle tracks from the tweet, translate them to any language, and burn them permanently into the video.
 
 ```bash
 # Burn existing subtitles without translating
@@ -170,16 +170,49 @@ xvd https://x.com/user/status/123 --subtitle en
 
 # Translate to Turkish and burn
 xvd https://x.com/user/status/123 --subtitle tr
-
-# Use your own LibreTranslate server (falls back to MyMemory if unreachable)
-xvd https://x.com/user/status/123 --subtitle tr --libre-url http://localhost:5000
 ```
 
-Translation engine priority:
-1. **LibreTranslate** — self-hosted, unlimited, fast (set `--libre-url`)
-2. **MyMemory** — free public API, no key needed, auto-fallback
+**No subtitle tracks on the video?** Set your OpenAI API key and `xvd` will automatically transcribe the audio via [Whisper](https://platform.openai.com/docs/guides/speech-to-text):
 
-> **Note:** Only works on videos that already have subtitle/caption tracks. If no tracks are found, xvd will skip this step and let you know.
+**Step 1 — Get an API key**
+
+Sign up at [platform.openai.com](https://platform.openai.com/api-keys) and create an API key.
+
+**Step 2 — Add it to your shell (one-time setup)**
+
+<details>
+<summary>macOS / Linux (zsh / bash)</summary>
+
+```bash
+# Add to your shell profile so it's always available
+echo 'export OPENAI_API_KEY="sk-..."' >> ~/.zshrc   # zsh (macOS default)
+# or
+echo 'export OPENAI_API_KEY="sk-..."' >> ~/.bashrc  # bash
+
+# Apply immediately
+source ~/.zshrc
+```
+</details>
+
+<details>
+<summary>Windows (PowerShell)</summary>
+
+```powershell
+# Set permanently for your user account
+[System.Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "sk-...", "User")
+
+# Re-open your terminal, then verify:
+echo $env:OPENAI_API_KEY
+```
+</details>
+
+**Step 3 — Use `--subtitle` as normal**
+
+```bash
+xvd https://x.com/user/status/123 --subtitle tr
+```
+
+`xvd` detects the key automatically — no extra flags needed. Translation is also free via [MyMemory](https://mymemory.translated.net/) and happens automatically when the source language differs from your target.
 
 ---
 
@@ -214,7 +247,6 @@ Stores up to 200 entries in `~/.config/xvd/history.json`.
 | `--watermark-size <px>`    |       | `150`          | Watermark width in pixels              |
 | `--watermark-opacity <n>`  |       | `0.7`          | Watermark opacity (0.0–1.0)            |
 | `--subtitle <lang>`        |       |                | Burn subtitles in target language      |
-| `--libre-url <url>`        |       |                | LibreTranslate server for translation  |
 | `--notify`                 |       |                | Desktop notification when done         |
 | `--watch`                  |       |                | Auto-download from clipboard           |
 | `--batch <file>`           |       |                | Path to URL list file                  |
@@ -239,11 +271,8 @@ xvd https://x.com/user/status/123 -o ~/Desktop --gif --notify
 # Burn a watermark
 xvd https://x.com/user/status/123 --watermark ~/logo.png --watermark-size 120 --watermark-opacity 0.6
 
-# Burn subtitles in Turkish (MyMemory translation, no setup needed)
+# Burn subtitles in Turkish
 xvd https://x.com/user/status/123 --subtitle tr
-
-# Burn subtitles using your own LibreTranslate server
-xvd https://x.com/user/status/123 --subtitle tr --libre-url http://localhost:5000
 
 # Watch mode — sit back, copy links
 xvd --watch -o ~/Videos --notify
@@ -310,7 +339,7 @@ npm install -g .
 - **HLS support** — Parses M3U8 playlists, downloads TS segments, concatenates with ffmpeg
 - **Clipboard watcher** — Polls clipboard every 600ms, fires on new X URLs
 - **Profile scraping** — Uses Twitter's internal GraphQL API with guest-token auth (same endpoints the web app uses)
-- **Subtitle translation** — Fetches existing SRT tracks from the tweet, translates via LibreTranslate or MyMemory, burns with ffmpeg
+- **Subtitle translation** — Fetches existing SRT tracks from the tweet, translates to any language, burns permanently with ffmpeg
 - **History** — Stored locally in `~/.config/xvd/history.json`, never leaves your machine
 
 ---
@@ -334,8 +363,7 @@ npm install -g .
 - `cdn.syndication.twimg.com` — video metadata
 - `api.fxtwitter.com` — fallback metadata
 - `twitter.com/i/api/graphql` — profile scraping (guest token, no login)
-- `api.mymemory.translated.net` — subtitle translation fallback (only with `--subtitle`)
-- Your LibreTranslate server — if `--libre-url` is set
+- Translation APIs — subtitle translation (only when `--subtitle` is used)
 - The video/subtitle CDN URLs returned by the above
 
 No telemetry. No tracking. All history is stored locally.
