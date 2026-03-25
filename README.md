@@ -15,6 +15,7 @@
 [Node ≥ 18](https://nodejs.org)
 [GitHub stars](https://github.com/ercan-er/xvd-cli/stargazers)
 [PRs welcome](https://github.com/ercan-er/xvd-cli/issues)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/kCoxX4RTh)
 
 ---
 
@@ -380,6 +381,14 @@ cd xvd-cli
 npm install
 npm run dev -- https://x.com/NASA/status/1902118174591521056
 ```
+
+---
+
+## ☕ Support
+
+If xvd saved you time, a coffee is always appreciated!
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buymeacoffee&logoColor=white&style=for-the-badge)](https://buymeacoffee.com/kCoxX4RTh)
 
 ---
 
