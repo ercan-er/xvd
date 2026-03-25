@@ -23,6 +23,7 @@ export interface SubtitleOptions {
   sourceLang?: string;          // auto-detected if omitted
   libreUrl?: string;            // LibreTranslate server, falls back to MyMemory if absent/down
   whisperUrl?: string;          // Whisper-compatible API for transcription when no tracks exist
+  whisperKey?: string;          // Bearer token for Whisper API (required for OpenAI)
   tracks: SubtitleTrack[];      // available tracks from the tweet
 }
 
@@ -159,7 +160,7 @@ export async function downloadVideo(
 
   if (postProcess?.subtitle) {
     if (!hasFfmpeg) throw new Error('Subtitle burning requires ffmpeg. Install it first.');
-    const { targetLang, sourceLang = 'auto', libreUrl, whisperUrl, tracks } = postProcess.subtitle;
+    const { targetLang, sourceLang = 'auto', libreUrl, whisperUrl, whisperKey, tracks } = postProcess.subtitle;
 
     onProgress?.({ downloaded: 0, total: 1, speed: 0, percentage: 0, phase: 'subtitle' });
 
@@ -179,7 +180,7 @@ export async function downloadVideo(
     } else {
       // no track — resolve Whisper endpoint: explicit flag → XVD_WHISPER_URL env → OPENAI_API_KEY env
       const whisperCfg = whisperUrl
-        ? { url: whisperUrl, apiKey: undefined }
+        ? { url: whisperUrl, apiKey: whisperKey }
         : resolveWhisperConfig();
 
       if (!whisperCfg) {
@@ -195,7 +196,8 @@ export async function downloadVideo(
         sourceLang === 'auto' ? undefined : sourceLang,
         whisperCfg.apiKey,
       );
-      trackLang = sourceLang === 'auto' ? targetLang : sourceLang;
+      // source language is unknown after Whisper — always translate so LibreTranslate auto-detects
+      trackLang = sourceLang === 'auto' ? 'auto' : sourceLang;
     }
 
     // translate only when the source language differs from what the user wants

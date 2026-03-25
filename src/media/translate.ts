@@ -41,17 +41,28 @@ export function renderSrt(segments: SrtSegment[]): string {
 
 // ── Translation engines ───────────────────────────────────────
 
+// Build-time injected default URLs (set via .env before npm run build)
+declare const __XVD_LIBRE_URL__: string;
+declare const __XVD_LIBRE_KEY__: string;
+const BUILTIN_LIBRE_URL: string = (typeof __XVD_LIBRE_URL__ !== 'undefined' ? __XVD_LIBRE_URL__ : '');
+const BUILTIN_LIBRE_KEY: string = (typeof __XVD_LIBRE_KEY__ !== 'undefined' ? __XVD_LIBRE_KEY__ : '');
+
 // LibreTranslate: self-hosted, no rate limit issues, needs server running
 async function translateViaLibre(
   text: string,
   source: string,
   target: string,
   libreUrl: string,
+  apiKey?: string,
 ): Promise<string> {
+  const body: Record<string, string> = { q: text, source, target, format: 'text' };
+  const effectiveKey = apiKey || BUILTIN_LIBRE_KEY;
+  if (effectiveKey) body['api_key'] = effectiveKey;
+
   const res = await fetch(`${libreUrl.replace(/\/$/, '')}/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ q: text, source, target, format: 'text' }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) throw new Error(`LibreTranslate HTTP ${res.status}`);
@@ -87,9 +98,12 @@ export async function translateText(
 ): Promise<string> {
   if (!text.trim()) return text;
 
-  if (libreUrl) {
+  // Prefer explicit flag > built-in baked URL
+  const effectiveLibreUrl = libreUrl || BUILTIN_LIBRE_URL;
+
+  if (effectiveLibreUrl) {
     try {
-      return await translateViaLibre(text, source === 'auto' ? 'en' : source, target, libreUrl);
+      return await translateViaLibre(text, source === 'auto' ? 'en' : source, target, effectiveLibreUrl);
     } catch {
       // LibreTranslate down or misconfigured — fall through to MyMemory
     }

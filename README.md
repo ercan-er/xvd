@@ -9,12 +9,12 @@
 
 **Download X / Twitter videos from your terminal beautifully.**
 
-[npm version](https://www.npmjs.com/package/xvd-cli)
-[npm downloads](https://www.npmjs.com/package/xvd-cli)
-[License: MIT](LICENSE)
-[Node ≥ 18](https://nodejs.org)
-[GitHub stars](https://github.com/ercan-er/xvd-cli/stargazers)
-[PRs welcome](https://github.com/ercan-er/xvd-cli/issues)
+[![npm version](https://img.shields.io/npm/v/xvd-cli?color=cb3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/xvd-cli)
+[![npm downloads](https://img.shields.io/npm/dm/xvd-cli?color=cb3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/xvd-cli)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Node ≥ 18](https://img.shields.io/badge/node-%E2%89%A518-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
+[![GitHub stars](https://img.shields.io/github/stars/ercan-er/xvd-cli?style=flat&logo=github)](https://github.com/ercan-er/xvd-cli/stargazers)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/ercan-er/xvd-cli/issues)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/kCoxX4RTh)
 
 ---
@@ -310,15 +310,43 @@ ffmpeg is **optional** but required for:
 **Install ffmpeg:**
 
 ```bash
-# macOS
-brew install ffmpeg
-
 # Ubuntu / Debian
 sudo apt install ffmpeg
 
 # Windows
 winget install ffmpeg
 ```
+
+**macOS:**
+
+```bash
+brew install ffmpeg
+```
+
+> **Subtitle burning (`--subtitle`) requires a special ffmpeg build.**
+> The standard Homebrew `ffmpeg` does **not** include libass, which is needed to burn subtitles into video. If you use `--subtitle` with the standard build, you'll get a `No such filter: 'subtitles'` error.
+
+To enable subtitle burning on macOS, install the full build from the `homebrew-ffmpeg` tap:
+
+```bash
+# 1. Add the tap
+brew tap homebrew-ffmpeg/ffmpeg
+
+# 2. Remove the standard build first (required — two versions can't coexist)
+brew uninstall ffmpeg
+
+# 3. Install the full build (compiles from source, ~2 minutes)
+brew install homebrew-ffmpeg/ffmpeg/ffmpeg
+```
+
+Verify it worked:
+```bash
+ffmpeg -filters | grep subtitles
+# Expected:
+# .. subtitles   V->V   Render text subtitles onto input video using the libass library.
+```
+
+> Downloads, GIFs, and watermarks work fine with the standard `brew install ffmpeg`. Only `--subtitle` needs the full build.
 
 ---
 

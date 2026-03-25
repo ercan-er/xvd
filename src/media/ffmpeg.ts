@@ -103,6 +103,40 @@ export async function concatSegments(listPath: string, outputPath: string): Prom
   await run(['-f', 'concat', '-safe', '0', '-i', listPath, '-c', 'copy', outputPath]);
 }
 
+/** Convert SRT content to ASS format with embedded Arial style */
+function srtToAss(srt: string): string {
+  const header = [
+    '[Script Info]',
+    'ScriptType: v4.00+',
+    'WrapStyle: 0',
+    'ScaledBorderAndShadow: yes',
+    '',
+    '[V4+ Styles]',
+    'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+    'Style: Default,Arial,22,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,35,1',
+    '',
+    '[Events]',
+    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+  ].join('\n');
+
+  function toAssTime(hms: string, ms: string): string {
+    const [hh, mm, ss] = hms.split(':');
+    const cs = String(Math.floor(Number(ms) / 10)).padStart(2, '0');
+    return `${Number(hh)}:${mm}:${ss}.${cs}`;
+  }
+
+  const dialogues = srt.trim().split(/\n\n+/).flatMap((block) => {
+    const lines = block.trim().split('\n');
+    if (lines.length < 3) return [];
+    const m = lines[1].match(/(\d{2}:\d{2}:\d{2}),(\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}),(\d{3})/);
+    if (!m) return [];
+    const text = lines.slice(2).join('\\N');
+    return [`Dialogue: 0,${toAssTime(m[1], m[2])},${toAssTime(m[3], m[4])},Default,,0,0,0,,${text}`];
+  });
+
+  return `${header}\n${dialogues.join('\n')}`;
+}
+
 /**
  * Burn an .srt subtitle file into the video.
  * Replaces the original file in-place.
@@ -112,17 +146,31 @@ export async function burnSubtitles(videoPath: string, srtPath: string): Promise
   const base    = path.basename(videoPath, path.extname(videoPath));
   const outPath = path.join(dir, `${base}_sub.mp4`);
 
-  // Forward slashes + escaped colons keep the filter syntax valid on all platforms
-  const srtEscaped = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+  // Write ASS next to the output video — simple predictable path, no tmpdir weirdness
+  const assPath = path.join(dir, `${base}_sub_tmp.ass`);
+
+  const { readFileSync, writeFileSync, unlinkSync } = await import('fs');
+  writeFileSync(assPath, srtToAss(readFileSync(srtPath, 'utf8')));
+
+  // Escape special chars for ffmpeg filter option value (no outer quotes — they cause parse errors)
+  const assEscaped = assPath
+    .replace(/\\/g, '\\\\')
+    .replace(/:/g, '\\:')
+    .replace(/,/g, '\\,')
+    .replace(/'/g, "\\'")
+    .replace(/ /g, '\\ ')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]');
 
   await run([
     '-i', videoPath,
-    '-vf', `subtitles='${srtEscaped}':force_style='FontName=Arial,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1'`,
+    '-vf', `subtitles=filename=${assEscaped}`,
     '-c:a', 'copy',
     outPath,
   ]);
 
-  const { renameSync, unlinkSync } = await import('fs');
+  unlinkSync(assPath);
+  const { renameSync } = await import('fs');
   unlinkSync(videoPath);
   renameSync(outPath, videoPath);
 

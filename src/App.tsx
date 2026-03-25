@@ -21,6 +21,7 @@ interface Props {
   subtitleLang?: string;
   libreUrl?: string;
   whisperUrl?: string;
+  whisperKey?: string;
   // batch
   batchFile?: string;
   concurrent: number;
@@ -41,6 +42,7 @@ export const App: React.FC<Props> = ({
   subtitleLang,
   libreUrl,
   whisperUrl,
+  whisperKey,
   batchFile,
   concurrent,
   profileUser,
@@ -60,6 +62,7 @@ export const App: React.FC<Props> = ({
         subtitleLang={subtitleLang}
         libreUrl={libreUrl}
         whisperUrl={whisperUrl}
+        whisperKey={whisperKey}
       />
     )}
     {mode === 'history' && <HistoryCommand />}

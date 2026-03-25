@@ -19,6 +19,18 @@ function extractAudio(videoPath: string): Promise<string> {
   });
 }
 
+// Build-time injected Whisper credentials
+declare const __XVD_WHISPER_URL__: string;
+declare const __XVD_WHISPER_KEY__: string;
+const BUILTIN_WHISPER_URL: string = (typeof __XVD_WHISPER_URL__ !== 'undefined' ? __XVD_WHISPER_URL__ : '');
+const BUILTIN_WHISPER_KEY: string = (typeof __XVD_WHISPER_KEY__ !== 'undefined' ? __XVD_WHISPER_KEY__ : '');
+
+// Detect the right model name: OpenAI uses "whisper-1", faster-whisper uses full HuggingFace name
+function resolveModel(whisperUrl: string): string {
+  if (whisperUrl.includes('api.openai.com')) return 'whisper-1';
+  return 'Systran/faster-whisper-small';
+}
+
 /**
  * Send audio to a Whisper-compatible REST API and get back an SRT string.
  * Works with OpenAI's Whisper API and any self-hosted server that follows
@@ -28,8 +40,10 @@ function extractAudio(videoPath: string): Promise<string> {
  * @param videoPath  Path to the downloaded MP4
  * @param whisperUrl Base URL of the Whisper server, e.g. http://10.0.0.5:8000
  * @param language   Optional BCP-47 language hint (e.g. "en") to improve accuracy
- * @param apiKey     Optional Bearer token (required for OpenAI)
+ * @param apiKey     Optional Bearer token (required for OpenAI / faster-whisper-server)
  */
+const MAX_WHISPER_MB = 10;
+
 export async function transcribeToSrt(
   videoPath: string,
   whisperUrl: string,
@@ -40,14 +54,22 @@ export async function transcribeToSrt(
 
   try {
     const audioBuffer = await readFile(wavPath);
+
+    const sizeMb = audioBuffer.byteLength / (1024 * 1024);
+    if (sizeMb > MAX_WHISPER_MB) {
+      throw new Error(
+        `Audio is ${sizeMb.toFixed(1)} MB — transcription is limited to ${MAX_WHISPER_MB} MB (~5 min). Download without --subtitle for longer videos.`,
+      );
+    }
     const form = new FormData();
     form.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'audio.wav');
-    form.append('model', 'whisper-1');
+    form.append('model', resolveModel(whisperUrl));
     form.append('response_format', 'srt');
     if (language) form.append('language', language);
 
+    const effectiveKey = apiKey || BUILTIN_WHISPER_KEY;
     const headers: Record<string, string> = {};
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    if (effectiveKey) headers['Authorization'] = `Bearer ${effectiveKey}`;
 
     const res = await fetch(`${whisperUrl.replace(/\/$/, '')}/v1/audio/transcriptions`, {
       method: 'POST',
@@ -76,10 +98,14 @@ export async function transcribeToSrt(
  * Returns undefined when nothing is configured (caller decides what to do).
  */
 export function resolveWhisperConfig(): { url: string; apiKey?: string } | undefined {
-  // 1 & 2 handled by caller passing whisperUrl; this resolves the env fallbacks
+  // 1. Build-time baked-in URL (from .env at npm run build)
+  if (BUILTIN_WHISPER_URL) return { url: BUILTIN_WHISPER_URL, apiKey: BUILTIN_WHISPER_KEY || undefined };
+
+  // 2. Runtime env variable (user's own setup)
   const envUrl = process.env['XVD_WHISPER_URL'];
   if (envUrl) return { url: envUrl };
 
+  // 3. OpenAI API key fallback
   const openaiKey = process.env['OPENAI_API_KEY'];
   if (openaiKey) return { url: 'https://api.openai.com', apiKey: openaiKey };
 

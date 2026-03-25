@@ -167,6 +167,7 @@ const cli = meow('', {
     subtitle:     { type: 'string' },
     libreUrl:     { type: 'string' },
     whisperUrl:   { type: 'string' },
+    whisperKey:   { type: 'string' },
     notify:       { type: 'boolean', default: false },
     watch:        { type: 'boolean', default: false },
     batch:        { type: 'string' },
@@ -184,7 +185,7 @@ const url         = cli.input[0];
 const {
   output, quality, concurrent,
   gif, watermark, watermarkPos, watermarkSize, watermarkOpacity,
-  subtitle, libreUrl, whisperUrl,
+  subtitle, libreUrl, whisperUrl, whisperKey,
   notify,
   watch, batch, profile, from, to, keyword,
   history, help, version,
@@ -245,6 +246,7 @@ const { waitUntilExit } = render(
     subtitleLang={subtitle}
     libreUrl={libreUrl}
     whisperUrl={whisperUrl}
+    whisperKey={whisperKey}
     batchFile={batch}
     concurrent={concurrent}
     profileUser={profile}

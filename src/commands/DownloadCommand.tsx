@@ -80,9 +80,10 @@ interface Props {
   subtitleLang?: string;   // target language code, e.g. "tr"
   libreUrl?: string;       // LibreTranslate server URL
   whisperUrl?: string;     // Whisper-compatible transcription API URL
+  whisperKey?: string;     // Bearer token for Whisper API (e.g. OpenAI key)
 }
 
-export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, postProcess, sendNotify = false, subtitleLang, libreUrl, whisperUrl }) => {
+export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, postProcess, sendNotify = false, subtitleLang, libreUrl, whisperUrl, whisperKey }) => {
   const { exit } = useApp();
   const [state, dispatch] = useReducer(reducer, { phase: 'resolving' });
 
@@ -100,7 +101,7 @@ export const DownloadCommand: React.FC<Props> = ({ rawUrl, outputDir, quality, p
       const canSubtitle = subtitleLang && (tweet.subtitleTracks.length > 0 || hasWhisper);
       const subtitleOpts: SubtitleOptions | undefined =
         canSubtitle
-          ? { targetLang: subtitleLang!, libreUrl, whisperUrl, tracks: tweet.subtitleTracks }
+          ? { targetLang: subtitleLang!, libreUrl, whisperUrl, whisperKey, tracks: tweet.subtitleTracks }
           : undefined;
 
       const effectivePostProcess: PostProcessOptions | undefined =
